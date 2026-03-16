@@ -1,0 +1,7 @@
+[dotenv@17.3.1] injecting env (1) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+Server listening on port 8080
+Client connected to proxy WebSocket
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Connected to Gemini Live API via SDK
+Disconnected from Gemini Live API.
+Client disconnected
