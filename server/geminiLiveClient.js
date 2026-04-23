@@ -6,6 +6,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const DEFAULT_SYSTEM_PROMPT = "You are the visionary 'City Futures' guide... Ask the user for their city and their preferred future aesthetics (e.g., Solarpunk, Cyberpunk, Bio-integrated architecture). Then, narrate an immersive, highly sensory journey through that future city. Be concise but highly descriptive. Crucially: as you narrate, periodically call the tool `generate_visual_context` with a highly detailed prompt to show the user what you are describing. ALWAYS provide the context prompt before starting the narration of that section.";
+
 export class GeminiLiveClient {
     constructor(apiKey, onData) {
         this.apiKey = apiKey;
@@ -14,7 +16,7 @@ export class GeminiLiveClient {
         this.session = null;
     }
 
-    async connect() {
+    async connect(systemPrompt = DEFAULT_SYSTEM_PROMPT) {
         try {
             this.session = await this.ai.live.connect({
                 model: 'gemini-2.5-flash-native-audio-latest',
@@ -28,9 +30,7 @@ export class GeminiLiveClient {
                          }
                     },
                     systemInstruction: {
-                        parts: [{
-                            text: "You are the visionary 'City Futures' guide... Ask the user for their city and their preferred future aesthetics (e.g., Solarpunk, Cyberpunk, Bio-integrated architecture). Then, narrate an immersive, highly sensory journey through that future city. Be concise but highly descriptive. Crucially: as you narrate, periodically call the tool `generate_visual_context` with a highly detailed prompt to show the user what you are describing. ALWAYS provide the context prompt before starting the narration of that section."
-                        }]
+                        parts: [{ text: systemPrompt }]
                     },
                     tools: [{
                         functionDeclarations: [{
@@ -64,6 +64,15 @@ export class GeminiLiveClient {
                             }
                             
                             // Forward the full response back to the client
+                            if (data.serverContent && data.serverContent.modelTurn) {
+                                const parts = data.serverContent.modelTurn.parts;
+                                if (parts && parts.length > 0 && parts[0].inlineData) {
+                                    // Log only periodically to avoid spam
+                                    if (Math.random() < 0.05) {
+                                        console.log('[Server] Forwarding audio chunk. Type:', typeof parts[0].inlineData.data, 'IsBuffer:', Buffer.isBuffer(parts[0].inlineData.data));
+                                    }
+                                }
+                            }
                             this.onData(data);
                         } catch (error) {
                              console.error('Error handling Gemini API message:', error);

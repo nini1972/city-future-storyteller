@@ -5,6 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GeminiLiveClient } from './geminiLiveClient.js';
 
@@ -19,6 +20,18 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use('/history', express.static(path.join(__dirname, 'public', 'history')));
 
+// REST: gallery history endpoint
+app.get('/api/history', (req, res) => {
+    const logPath = path.join(__dirname, 'public', 'history', 'history.json');
+    if (!fs.existsSync(logPath)) return res.json([]);
+    try {
+        const data = JSON.parse(fs.readFileSync(logPath, 'utf8'));
+        res.json(data);
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to read history' });
+    }
+});
+
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
@@ -29,27 +42,36 @@ app.get('/', (req, res) => {
 
 wss.on('connection', (ws) => {
     console.log('Client connected to proxy WebSocket');
-    
-    // Create a new instance of the Gemini Live Client for this connection
-    const geminiClient = new GeminiLiveClient(
-        process.env.GEMINI_API_KEY, 
-        (data) => {
-            // Forward data from Gemini to the client
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify(data));
-            }
-        }
-    );
 
-    // Initial connection to Gemini
-    geminiClient.connect().catch(console.error);
+    let pendingSystemPrompt = null;
+    let geminiClient = null;
 
     ws.on('message', (message) => {
         try {
             const parsed = JSON.parse(message);
-            // Forward specific real-time messages to the Gemini Live API
+
+            // Handle configure message (sent before audio starts)
+            if (parsed.type === 'configure') {
+                pendingSystemPrompt = parsed.systemPrompt || null;
+                console.log('Received configure message. System prompt set.');
+
+                // Now create and connect Gemini with the custom prompt
+                geminiClient = new GeminiLiveClient(
+                    process.env.GEMINI_API_KEY,
+                    (data) => {
+                        if (ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify(data));
+                        }
+                    }
+                );
+                geminiClient.connect(pendingSystemPrompt).catch(console.error);
+                ws.send(JSON.stringify({ type: 'configured', status: 'ok' }));
+                return;
+            }
+
+            // Forward audio/content messages to Gemini
             if (parsed.realtimeInput || parsed.clientContent) {
-                 geminiClient.send(parsed);
+                if (geminiClient) geminiClient.send(parsed);
             }
         } catch (e) {
             console.error('Error parsing client message:', e);
@@ -58,7 +80,7 @@ wss.on('connection', (ws) => {
 
     ws.on('close', () => {
         console.log('Client disconnected');
-        geminiClient.disconnect();
+        if (geminiClient) geminiClient.disconnect();
     });
 });
 

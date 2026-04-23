@@ -32,7 +32,20 @@ export class AudioRecorder {
         };
 
         this.source.connect(this.processor);
-        this.processor.connect(this.audioContext.destination);
+        
+        // CRITICAL: The processor MUST be connected to the destination (or a graph leading to it)
+        // for the browser's audio engine to run the process() loop. 
+        // We use a GainNode with 0 volume so we don't play the mic back to the user's speakers.
+        const silentGain = this.audioContext.createGain();
+        silentGain.gain.value = 0;
+        this.processor.connect(silentGain);
+        silentGain.connect(this.audioContext.destination);
+        
+        // Resume context in case it was suspended (browser autoplay policy)
+        if (this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+        }
+
     }
 
     stop() {

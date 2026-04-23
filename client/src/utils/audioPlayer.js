@@ -18,6 +18,15 @@ export class AudioPlayer {
     addAudioChunk(base64Audio) {
         if (!this.audioContext) this.init();
         
+        // CRITICAL: Resume context if suspended by browser autoplay policy
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume().then(() => this._scheduleChunk(base64Audio));
+            return;
+        }
+        this._scheduleChunk(base64Audio);
+    }
+
+    _scheduleChunk(base64Audio) {
         // Base64 to ArrayBuffer
         const binaryString = atob(base64Audio);
         const bytes = new Uint8Array(binaryString.length);
@@ -25,7 +34,7 @@ export class AudioPlayer {
             bytes[i] = binaryString.charCodeAt(i);
         }
 
-        // Gemini returns 16-bit PCM little-endian
+        // Gemini returns 16-bit PCM little-endian at 24kHz
         const pcmData = new Int16Array(bytes.buffer);
         const floatData = new Float32Array(pcmData.length);
         for (let i = 0; i < pcmData.length; i++) {
@@ -37,27 +46,31 @@ export class AudioPlayer {
 
         const source = this.audioContext.createBufferSource();
         source.buffer = buffer;
-        source.connect(this.audioContext.destination);
+
+        // GainNode ensures volume is at 1.0 and audio reaches the output
+        const gainNode = this.audioContext.createGain();
+        gainNode.gain.value = 1.0;
+        source.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
 
         const startTime = Math.max(this.nextTime, this.audioContext.currentTime);
         source.start(startTime);
         
-        // Set playing state
         if (!this.isPlaying && this.onPlaybackStatus) {
             this.isPlaying = true;
             this.onPlaybackStatus(true);
         }
 
         source.onended = () => {
-             // Heuristic: if current time catches up to nextTime, we stopped playing
-             if (this.audioContext.currentTime >= this.nextTime - 0.1) {
+             if (this.audioContext && this.audioContext.currentTime >= this.nextTime - 0.1) {
                  this.isPlaying = false;
                  if (this.onPlaybackStatus) this.onPlaybackStatus(false);
              }
-        }
+        };
 
         this.nextTime = startTime + buffer.duration;
     }
+
 
     stop() {
         if (this.audioContext) {

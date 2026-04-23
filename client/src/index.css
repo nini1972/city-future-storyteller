@@ -289,3 +289,65 @@ h1, h2, h3, h4 {
   background-color: var(--accent-teal);
   box-shadow: 0 0 10px var(--accent-teal);
 }
+
+/* ─── App Navigation ─── */
+.app-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+  border-color: var(--accent-purple);
+  color: var(--text-primary);
+}
+
+.nav-btn.active {
+  border-color: var(--accent-purple);
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--text-primary);
+  box-shadow: 0 0 12px -4px var(--accent-purple);
+}
+
+.nav-btn-back {
+  border-color: rgba(20, 184, 166, 0.3);
+  color: var(--accent-teal);
+}
+
+.nav-btn-back:hover {
+  border-color: var(--accent-teal);
+  background: rgba(20, 184, 166, 0.1);
+  color: var(--accent-teal);
+}
+
+/* ─── Config Badge ─── */
+.config-badge {
+  font-size: 0.72rem;
+  text-transform: capitalize;
+  letter-spacing: 0.04em;
+  color: var(--accent-teal);
+  background: rgba(20, 184, 166, 0.1);
+  border: 1px solid rgba(20, 184, 166, 0.25);
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}

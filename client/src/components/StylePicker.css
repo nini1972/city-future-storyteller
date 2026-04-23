@@ -1,0 +1,259 @@
+.picker-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 3rem 2rem;
+  gap: 3rem;
+  animation: fadeInDown 0.8s ease-out;
+}
+
+.picker-header {
+  text-align: center;
+}
+
+.picker-header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+}
+
+.picker-header p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 300;
+  opacity: 0.7;
+}
+
+/* ─── Aesthetic Cards ─── */
+.picker-section {
+  width: 100%;
+  max-width: 900px;
+}
+
+.picker-section-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  opacity: 0.6;
+}
+
+.aesthetic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 600px) {
+  .aesthetic-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.aesthetic-card {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.25rem 1rem;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.25s ease;
+  overflow: hidden;
+  user-select: none;
+}
+
+.aesthetic-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background: var(--card-glow);
+}
+
+.aesthetic-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--card-accent);
+}
+
+.aesthetic-card:hover::before {
+  opacity: 0.08;
+}
+
+.aesthetic-card.selected {
+  border-color: var(--card-accent);
+  box-shadow: 0 0 20px -4px var(--card-accent), inset 0 0 30px -10px var(--card-accent);
+}
+
+.aesthetic-card.selected::before {
+  opacity: 0.12;
+}
+
+.card-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.card-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.card-sub {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  opacity: 0.65;
+  margin-top: 0.2rem;
+}
+
+.selected-check {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--card-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: #000;
+  font-weight: 700;
+}
+
+/* ─── Era Slider ─── */
+.era-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.era-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  min-width: 5ch;
+}
+
+input[type='range'].era-input {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--accent-purple) var(--slider-pct, 0%),
+    var(--glass-border) var(--slider-pct, 0%)
+  );
+  outline: none;
+  cursor: pointer;
+}
+
+input[type='range'].era-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-purple);
+  box-shadow: 0 0 10px var(--accent-purple);
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+input[type='range'].era-input:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 18px var(--accent-purple);
+}
+
+/* ─── Tone Pills ─── */
+.tone-pills {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tone-pill {
+  padding: 0.5rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.tone-pill:hover {
+  border-color: var(--accent-purple);
+  color: var(--text-primary);
+}
+
+.tone-pill.selected {
+  border-color: var(--accent-purple);
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--text-primary);
+  box-shadow: 0 0 12px -3px var(--accent-purple);
+}
+
+/* ─── CTA Button ─── */
+.begin-btn {
+  margin-top: 1rem;
+  padding: 1rem 3rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-teal));
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 24px rgba(139, 92, 246, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.begin-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.begin-btn:hover:not(:disabled)::after {
+  opacity: 1;
+}
+
+.begin-btn:hover:not(:disabled) {
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.6);
+}
+
+.begin-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
