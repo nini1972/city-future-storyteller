@@ -14,6 +14,7 @@ export class GeminiLiveClient {
         this.ai = new GoogleGenAI({ apiKey });
         this.onData = onData; // Callback to send data to our proxy client
         this.session = null;
+        this.pendingMessages = [];
     }
 
     async connect(systemPrompt = DEFAULT_SYSTEM_PROMPT, city = null) {
@@ -88,6 +89,14 @@ export class GeminiLiveClient {
                     }
                 }
             });
+
+            // Flush any messages (like uploaded images) that arrived while connecting
+            while (this.pendingMessages.length > 0) {
+                const msg = this.pendingMessages.shift();
+                console.log('[Server] Flushing pending message queued before connection was ready.');
+                this.send(msg);
+            }
+
         } catch (error) {
             console.error("Failed to connect to Gemini Live:", error);
             this.onData({ error: `Connection to Gemini failed: ${error.message}` });
@@ -100,6 +109,23 @@ export class GeminiLiveClient {
             const args = functionCall.args;
             const prompt = args.prompt || args.context;
             console.log('Visual prompt received:', prompt);
+
+            if (this.session) {
+                // Send the tool response immediately so Gemini resumes its audio stream.
+                // It requires the 'id' field to match the incoming functionCall to avoid a 1007 schema error.
+                console.log('\n--- SENDING TOOL RESPONSE TO RESUME VOICE ---\n');
+                try {
+                    this.session.sendToolResponse({
+                        functionResponses: [{
+                            id: functionCall.id,
+                            name: functionCall.name,
+                            response: { result: "Image generation started and will be displayed to user." }
+                        }]
+                    });
+                } catch (e) {
+                    console.error('Failed to send tool response:', e);
+                }
+            }
 
             try {
                 console.log('Requesting Google Imagen 4.0 generation...');
@@ -162,33 +188,27 @@ export class GeminiLiveClient {
                 console.error("Imagen generation failed:", error.message);
                 // Fallback to a placeholder or skip if it fails, so the app doesn't crash
             }
-
-            if (this.session) {
-                // Send the tool response so Gemini resumes its audio stream.
-                // It requires the 'id' field to match the incoming functionCall to avoid a 1007 schema error.
-                console.log('\n--- SENDING TOOL RESPONSE TO RESUME VOICE ---\n');
-                try {
-                    this.session.sendToolResponse({
-                        functionResponses: [{
-                            id: functionCall.id,
-                            name: functionCall.name,
-                            response: { result: "Image generated successfully and displayed to user." }
-                        }]
-                    });
-                } catch (e) {
-                    console.error('Failed to send tool response:', e);
-                }
-            }
         }
     }
 
     send(data) {
+        if (!this.session) {
+             this.pendingMessages.push(data);
+             return;
+        }
+
         if (this.session) {
              if (data.realtimeInput) {
-                 // Forward real-time input (audio chunks) directly to the SDK
-                 // The SDK internally expects `{ media: { mimeType, data } }`
+                 // Forward real-time input (audio/video chunks) directly to the SDK
                  if (data.realtimeInput.mediaChunks && data.realtimeInput.mediaChunks.length > 0) {
-                     this.session.sendRealtimeInput({ media: data.realtimeInput.mediaChunks[0] });
+                     const chunk = data.realtimeInput.mediaChunks[0];
+                     if (chunk.mimeType.startsWith('audio/')) {
+                         this.session.sendRealtimeInput({ audio: chunk });
+                     } else {
+                         // Images use the 'video' field as per SDK
+                         console.log('[Server] -> Gemini: Forwarding IMAGE payload (video field).');
+                         this.session.sendRealtimeInput({ video: chunk });
+                     }
                  }
              } else if (data.clientContent) {
                  // CRITICAL FIX: Ignore explicit turnComplete messages from client because 
