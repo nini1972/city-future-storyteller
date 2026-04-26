@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import './StylePicker.css';
 
 const AESTHETICS = [
@@ -17,6 +17,8 @@ export default function StylePicker({ onBegin }) {
   const [selectedAesthetics, setSelectedAesthetics] = useState([]);
   const [era, setEra] = useState(2100);
   const [tone, setTone] = useState('dramatic');
+  const [base64Image, setBase64Image] = useState(null);
+  const fileInputRef = useRef(null);
 
   const toggleAesthetic = (key) => {
     setSelectedAesthetics((prev) =>
@@ -33,7 +35,37 @@ export default function StylePicker({ onBegin }) {
   };
 
   const handleBegin = () => {
-    onBegin({ aesthetics: selectedAesthetics, era, tone });
+    onBegin({ aesthetics: selectedAesthetics, era, tone, base64Image });
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 1024;
+        let width = img.width;
+        let height = img.height;
+        if (width > height && width > MAX_SIZE) {
+          height *= MAX_SIZE / width;
+          width = MAX_SIZE;
+        } else if (height > MAX_SIZE) {
+          width *= MAX_SIZE / height;
+          height = MAX_SIZE;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        // Force standard JPEG to prevent Gemini API 1008 unsupported format errors
+        setBase64Image(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -101,6 +133,31 @@ export default function StylePicker({ onBegin }) {
               {t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* ── Architect's Lens (Image Upload) ── */}
+      <div className="picker-section">
+        <div className="picker-section-label">The Architect's Lens (Optional)</div>
+        <div className="upload-container" onClick={() => fileInputRef.current?.click()}>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleImageUpload} 
+            accept="image/*" 
+            style={{ display: 'none' }} 
+          />
+          {base64Image ? (
+            <div className="upload-preview">
+              <img src={base64Image} alt="Uploaded base" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px' }} />
+              <p style={{ marginTop: '0.5rem', color: 'var(--accent-teal)' }}>Image linked to neural grid. Click to replace.</p>
+            </div>
+          ) : (
+            <div className="upload-placeholder" style={{ border: '1px dashed var(--glass-border)', padding: '2rem', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.3s ease' }}>
+              <span style={{ fontSize: '2rem' }}>📸</span>
+              <p style={{ marginTop: '1rem', color: 'var(--text-secondary)' }}>Upload a photo of your street.<br/>We'll build the future directly on top of it.</p>
+            </div>
+          )}
         </div>
       </div>
 

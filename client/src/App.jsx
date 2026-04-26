@@ -4,6 +4,7 @@ import { AudioRecorder } from './utils/audioRecorder';
 import { AudioPlayer } from './utils/audioPlayer';
 import { buildSystemPrompt } from './utils/systemPrompt';
 import StylePicker from './components/StylePicker';
+import CityPicker from './components/CityPicker';
 import Gallery from './components/Gallery';
 import './index.css';
 
@@ -12,11 +13,25 @@ import './index.css';
 // ────────────────────────────────────────────────
 
 function App() {
-  const [view, setView] = useState('picker');            // 'picker' | 'storyteller' | 'gallery'
+  const [view, setView] = useState('city-picker');       // 'city-picker' | 'picker' | 'storyteller' | 'gallery'
   const [sessionConfig, setSessionConfig] = useState(null);
+  const [selectedCity, setSelectedCity] = useState(null);
 
-  const handleBeginJourney = (config) => {
-    setSessionConfig(config);
+  const handleCitySelect = (city) => {
+    setSelectedCity(city);
+    setView('picker');
+  };
+
+  const handleBeginJourney = async (config) => {
+    try {
+      const res = await fetch(`http://localhost:8080/api/memory/${selectedCity}`);
+      const data = await res.json();
+      config.memory = data.memory || [];
+    } catch (e) {
+      console.error('Failed to load memory', e);
+      config.memory = [];
+    }
+    setSessionConfig({ ...config, city: selectedCity });
     setView('storyteller');
   };
 
@@ -26,8 +41,8 @@ function App() {
         <h1 className="title-gradient">City Futures Storyteller</h1>
         <p className="subtitle">Discover the multiverse of your city's tomorrow</p>
 
-        {/* Nav — only after picker */}
-        {view !== 'picker' && (
+        {/* Nav — only after style picker */}
+        {(view === 'storyteller' || view === 'gallery') && (
           <nav className="app-nav">
             <button
               className={`nav-btn ${view === 'storyteller' ? 'active' : ''}`}
@@ -43,7 +58,7 @@ function App() {
             </button>
             <button
               className="nav-btn nav-btn-back"
-              onClick={() => setView('picker')}
+              onClick={() => setView('city-picker')}
               title="Change style"
             >
               <ArrowLeft size={14} /> Restyle
@@ -52,6 +67,7 @@ function App() {
         )}
       </header>
 
+      {view === 'city-picker' && <CityPicker onSelectCity={handleCitySelect} />}
       {view === 'picker' && <StylePicker onBegin={handleBeginJourney} />}
       {view === 'storyteller' && <StorytellerView config={sessionConfig} />}
       {view === 'gallery' && <Gallery />}
@@ -88,7 +104,19 @@ function StorytellerView({ config }) {
 
       // Send the style config as a configure message before any audio
       const systemPrompt = config ? buildSystemPrompt(config) : undefined;
-      ws.send(JSON.stringify({ type: 'configure', systemPrompt }));
+      ws.send(JSON.stringify({ type: 'configure', systemPrompt, city: config?.city }));
+
+      // Send the user's uploaded image if they used the Architect's Lens
+      if (config?.base64Image) {
+        const base64Data = config.base64Image.split(',')[1];
+        const mimeType = config.base64Image.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0];
+        
+        ws.send(JSON.stringify({
+          realtimeInput: {
+            mediaChunks: [{ mimeType, data: base64Data }]
+          }
+        }));
+      }
     };
 
     ws.onclose = () => {
@@ -177,7 +205,7 @@ function StorytellerView({ config }) {
 
   // Derive config display labels
   const configLabel = config
-    ? `${config.aesthetics.join(' + ')} · ${config.era} AD · ${config.tone}`
+    ? `${config.city} · ${config.aesthetics.join(' + ')} · ${config.era} AD`
     : null;
 
   return (

@@ -93,10 +93,4 @@ To run this project locally, you will need Node.js installed and a valid **Googl
 
 *(For Judges Container: Place link to unlisted YouTube demo here or check the `deploy.sh` script to verify our use of GCP services).* 
 
-The backend is containerized and hosted cleanly on **Google Cloud Run** to ensure low-latency WebSocket connections for the Gemini API.
-
-## 💡 Learnings & Findings
-
-1. **Audio Streaming is Complex:** Working with raw PCM Int16 audio streams in the browser required careful orchestration using `AudioWorkletNode` for input and a robust `AudioContext` buffer queue for seamless playback of the agent's voice.
-2. **The Power of Interleaved Tools:** By instructing the Live API agent to call `generate_visual_context` *before* narrating a specific scene, we achieved a brilliant "show and tell" effect where the UI updates with an image right as the agent begins describing it.
-3. **Latency Matters:** Proxying the WebSocket through our own Node.js server (required to safely hold the API key and manage image generation endpoints) added a small amount of latency, highlighting the importance of using edge-optimized deployment like Google Cloud Run.
+The backend is containerized and hosted cleanly on **Google Cloud Run** to ensure low-latency WebSocket connections for the Gemininde

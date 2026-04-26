@@ -16,7 +16,8 @@ export class GeminiLiveClient {
         this.session = null;
     }
 
-    async connect(systemPrompt = DEFAULT_SYSTEM_PROMPT) {
+    async connect(systemPrompt = DEFAULT_SYSTEM_PROMPT, city = null) {
+        this.city = city;
         try {
             this.session = await this.ai.live.connect({
                 model: 'gemini-2.5-flash-native-audio-latest',
@@ -149,7 +150,8 @@ export class GeminiLiveClient {
                     logData.push({
                         timestamp,
                         filename,
-                        prompt
+                        prompt,
+                        city: this.city
                     });
                     fs.writeFileSync(logPath, JSON.stringify(logData, null, 2));
                     console.log(`Saved image to ${filename} and updated history.json`);
@@ -162,12 +164,20 @@ export class GeminiLiveClient {
             }
 
             if (this.session) {
-                // CRITICAL FIX: gemini-2.5-flash-native-audio drops with 1007 if we send JSON tool responses.
-                // Since it streams audio concurrently anyway, we just execute the tool statefully on the client side 
-                // and purposely DO NOT send a toolResponse back to the API. 
-                console.log('\n--- SKIPPING OUTGOING TOOL RESPONSE TO PREVENT 1007 CRASH ---\n');
-                // const toolResponseMessage = { ... };
-                // this.session.sendToolResponse(toolResponseMessage);
+                // Send the tool response so Gemini resumes its audio stream.
+                // It requires the 'id' field to match the incoming functionCall to avoid a 1007 schema error.
+                console.log('\n--- SENDING TOOL RESPONSE TO RESUME VOICE ---\n');
+                try {
+                    this.session.sendToolResponse({
+                        functionResponses: [{
+                            id: functionCall.id,
+                            name: functionCall.name,
+                            response: { result: "Image generated successfully and displayed to user." }
+                        }]
+                    });
+                } catch (e) {
+                    console.error('Failed to send tool response:', e);
+                }
             }
         }
     }

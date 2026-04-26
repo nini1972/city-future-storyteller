@@ -40,6 +40,22 @@ app.get('/', (req, res) => {
     res.send({ status: 'City Futures Storyteller Backend is Running!' });
 });
 
+// REST: memory endpoint for Option 5
+app.get('/api/memory/:city', (req, res) => {
+    const logPath = path.join(__dirname, 'public', 'history', 'history.json');
+    if (!fs.existsSync(logPath)) return res.json({ memory: [] });
+    try {
+        const data = JSON.parse(fs.readFileSync(logPath, 'utf8'));
+        const cityMemories = data
+            .filter(d => d.city === req.params.city)
+            .map(d => d.prompt);
+        // Only return the last 5 to not blow up the prompt context
+        res.json({ memory: cityMemories.slice(-5) });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to read memory' });
+    }
+});
+
 wss.on('connection', (ws) => {
     console.log('Client connected to proxy WebSocket');
 
@@ -53,7 +69,8 @@ wss.on('connection', (ws) => {
             // Handle configure message (sent before audio starts)
             if (parsed.type === 'configure') {
                 pendingSystemPrompt = parsed.systemPrompt || null;
-                console.log('Received configure message. System prompt set.');
+                const city = parsed.city || null;
+                console.log(`Received configure message for city: ${city}. System prompt set.`);
 
                 // Now create and connect Gemini with the custom prompt
                 geminiClient = new GeminiLiveClient(
@@ -64,7 +81,7 @@ wss.on('connection', (ws) => {
                         }
                     }
                 );
-                geminiClient.connect(pendingSystemPrompt).catch(console.error);
+                geminiClient.connect(pendingSystemPrompt, city).catch(console.error);
                 ws.send(JSON.stringify({ type: 'configured', status: 'ok' }));
                 return;
             }
