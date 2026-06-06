@@ -14,6 +14,11 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
+if (!process.env.GEMINI_API_KEY) {
+  console.error('ERROR: GEMINI_API_KEY is not set. Copy server/.env.example to server/.env and fill in your key.');
+  process.exit(1);
+}
+
 const app = express();
 app.use(cors());
 app.use(morgan('dev'));
