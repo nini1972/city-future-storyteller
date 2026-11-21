@@ -11,7 +11,7 @@ const DEFAULT_SYSTEM_PROMPT = "You are the visionary 'City Futures' guide... Ask
 export class GeminiLiveClient {
     constructor(apiKey, onData) {
         this.apiKey = apiKey;
-        this.ai = new GoogleGenAI({ apiKey });
+        this.ai = new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
         this.onData = onData; // Callback to send data to our proxy client
         this.session = null;
         this.pendingMessages = [];
@@ -21,7 +21,7 @@ export class GeminiLiveClient {
         this.city = city;
         try {
             this.session = await this.ai.live.connect({
-                model: 'gemini-2.5-flash-native-audio-latest',
+                model: 'gemini-3.8-live',
                 config: {
                     responseModalities: [Modality.AUDIO],
                     speechConfig: {
@@ -38,6 +38,7 @@ export class GeminiLiveClient {
                         functionDeclarations: [{
                             name: "generate_visual_context",
                             description: "Generate a visual representation of the scene you are describing to the user.",
+                            behavior: "NON_BLOCKING",
                             parameters: {
                                 type: "OBJECT",
                                 properties: {
@@ -128,21 +129,25 @@ export class GeminiLiveClient {
             }
 
             try {
-                console.log('Requesting Google Imagen 4.0 generation...');
-                // We use our existing initialized this.ai SDK client to fetch the image.
-                const response = await this.ai.models.generateImages({
-                    model: 'imagen-4.0-fast-generate-001',
-                    prompt: prompt,
-                    config: {
-                        numberOfImages: 1,
-                        outputMimeType: 'image/jpeg',
-                        aspectRatio: '16:9' // Cinematic aspect ratio for scenes
-                    }
+                console.log('Requesting Gemini Nano Banana 2.1 generation...');
+                const interaction = await this.ai.interactions.create({
+                    model: 'gemini-nano-banana-2.1',
+                    input: prompt,
+                    response_format: {
+                        type: 'image',
+                        mime_type: 'image/jpeg',
+                        aspect_ratio: '16:9',
+                    },
                 });
 
-                const img = response.generatedImages[0].image;
-                const imageUrl = `data:${img.mimeType};base64,${img.imageBytes}`;
-                console.log('Imagen generation successful. Pushing to client...');
+                const img = interaction.output_image;
+                if (!img || !img.data) {
+                    throw new Error('No image data returned from gemini-nano-banana-2.1');
+                }
+                const mimeType = img.mime_type || 'image/jpeg';
+                const imageBytes = img.data;
+                const imageUrl = `data:${mimeType};base64,${imageBytes}`;
+                console.log('Gemini Nano Banana 2.1 generation successful. Pushing to client...');
 
                 // Send custom visual_context message to the frontend client
                 this.onData({
@@ -165,7 +170,7 @@ export class GeminiLiveClient {
                     const filepath = path.join(historyDir, filename);
                     
                     // Save the base64 image bytes to disk
-                    fs.writeFileSync(filepath, Buffer.from(img.imageBytes, 'base64'));
+                    fs.writeFileSync(filepath, Buffer.from(imageBytes, 'base64'));
                     
                     // Maintain a JSON log of all prompts
                     const logPath = path.join(historyDir, 'history.json');
